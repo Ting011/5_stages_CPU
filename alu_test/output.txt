@@ -77,16 +77,17 @@ instruction = 32'h00010083, regA = 32'h00000000, regB = 32'h10000000, result = 3
 instruction = 32'h20200001, regA = 32'h00000001, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
 
                                      addi test(overflow)
-instruction = 32'h20200001, regA = 32'h7fffffff, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
+// instruction = 32'h20200001, regA = 32'h7fffffff, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
+instruction = 32'h20200001, regA = 32'h00000000, regB = 32'h7fffffff, immediate = 16'b0000000000000001, result = 32'h80000000, flags = 3'b011
 
                                         andi test
 instruction = 32'h30010001, regA = 32'hffffffff, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
 
                                         addiu test
-instruction = 32'h22018001, regA = 32'h00000001, regB = 32'h00000000, immediate = 16'b1000000000000001, result = 32'hffff8000, flags = 3'b010
+instruction = 32'h26018001, regA = 32'h00000001, regB = 32'h00000000, immediate = 16'b1000000000000001, result = 32'h00008001, flags = 3'b000
 
                                          ori test
-instruction = 32'h32010001, regA = 32'h00000010, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
+instruction = 32'h36010001, regA = 32'h00000010, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000001, flags = 3'b000
 
                                         xori test
 instruction = 32'h38010001, regA = 32'h00000001, regB = 32'h00000000, immediate = 16'b0000000000000001, result = 32'h00000000, flags = 3'b100

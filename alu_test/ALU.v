@@ -12,7 +12,7 @@ module alu(
     reg[4:0] rs;
     reg[4:0] rt;
     reg[4:0] rd;
-    reg[4:0] sa;
+    reg[4:0] sa; // constant, 0 ~ 31
     reg[15:0] imm16;
 
     // R-Type: 000000
@@ -46,44 +46,339 @@ module alu(
                     flags[0] <= result[31] ^ regA[31];
                 end
                 else
-                    flags[0] <= 1'b1;
+                    flags[0] <= 1'b0;
                 flags[2:1] <= {result == 32'b0, result[31]};
             end
             else if(func == 6'b100001) // addu
             begin // addu
                 result <= regA + regB;
-                flags[0] <= 1'b0;
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b100010)
+            begin // sub(overflow)
+                if(rs == 5'b0)
+                begin
+                    result <= regA + ~regB + 1;
+                    if(regA[31] != regB[31])
+                    begin
+                        flags[0] <= result[31] ^ regA[31];
+                    end
+                    else
+                        flags[0] <= 1'b0;
+                end
+                else
+                begin
+                    result <= regB + ~regA + 1;
+                    if(regA[31] != regB[31])
+                    begin
+                        flags[0] <= result[31] ^ regB[31];
+                    end
+                    else
+                        flags[0] <= 1'b0;
+                end
                 flags[2:1] <= {result == 32'b0, result[31]};
             end
-            else if(func == 6'b100010) begin // sub(overflow)
-                if(rs == 5'b0)begin
+            else if(func == 6'b100011)
+            begin // subu
+                if(rs == 5'b0)
+                begin
                     result <= regA + ~regB + 1;
                 end
-                else begin
+                else
+                begin
                     result <= regB + ~regA + 1;
                 end
-                if(regA[31] == regB[31])
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b100100)
+            begin // and
+                result <= regA & regB;
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b100111)
+            begin // nor
+                result <= ~(regA | regB);
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b100101)
+            begin // or
+                result <= regA | regB;
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b100110)
+            begin // xor
+                result <= regA ^ regB;
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b101010)
+            begin // slt(signed)
+                if(rs == 5'b0)
+                begin
+                    result <= regA + ~regB + 1;
+                    if(regA[31] != regB[31])
+                    begin
+                        flags[0] <= result[31] ^ regA[31];
+                    end
+                    else
+                        flags[0] <= 1'b0;
+                end
+                else
+                begin
+                    result <= regB + ~regA + 1;
+                    if(regA[31] != regB[31])
+                    begin
+                        flags[0] <= result[31] ^ regB[31];
+                    end
+                    else
+                        flags[0] <= 1'b0;
+                end
+                flags[2:1] <= {result == 32'b0, result[31]};
+            end
+            else if(func == 6'b101011)
+            begin // sltu
+                if(rs == 5'b0)
+                begin
+                    result <= regA + ~regB + 1;
+                end
+                else
+                begin
+                    result <= regB + ~regA + 1;
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000000)
+            begin // sll
+                if(rt == 5'b0)
+                begin
+                    result <= regA << sa;
+                end
+                else
+                begin
+                    result <= regB << sa;
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000100)
+            begin // sllv
+                if(rt == 5'b0)
+                begin
+                    result <= regA << regB;
+                end
+                else
+                begin
+                    result <= regB << regA;
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000010)
+            begin // srl
+                if(rt == 5'b0)
+                begin
+                    result <= regA >> sa;
+                end
+                else
+                begin
+                    result <= regB >> sa;
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000110)
+            begin // srlv
+                if(rt == 5'b0)
+                begin
+                    result <= regA >> regB;
+                end
+                else
+                begin
+                    result <= regB >> regA;
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000011)
+            begin // sra
+                if(rt == 5'b0)
+                begin
+                    result <= {regA[31], regA >> sa};
+                end
+                else
+                begin
+                    result <= {regB[31], regB >> sa};
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+            else if(func == 6'b000111)
+            begin // srav
+                if(rt == 5'b0)
+                begin
+                    result <= {regA[31], regA >> regB};
+                end
+                else
+                begin
+                    result <= {regB[31], regB >> regA};
+                end
+                flags <= {result == 32'b0, result[31], 1'b0};
+            end
+        end
+        // I: reg[rt] <- reg[rs] op imm32
+        else if(opcode == 6'b001000)
+        begin // addi(overflow)
+            if(rs == 5'b0)
+            begin
+                result <= regA + {{16{imm16[15]}}, imm16};
+                if(regA[31] == imm16[15])
+                begin
+                    flags[0] <= regA[31] ^ result[31];
+                end
+                else
+                begin
+                    flags[0] <= 1'b0;
+                end
+            end
+            else
+            begin
+                result <= regB + {{16{imm16[15]}}, imm16};
+                if(regB[31] == imm16[15])
+                begin
+                    flags[0] <= regB[31] ^ result[31];
+                end
+                else
+                begin
+                    flags[0] <= 1'b0;
+                end
+            end
+            flags[2:1] <= {result == 32'b0, result[31]};
+        end
+        else if(opcode == 6'b001001)
+        begin // addiu
+            if(rs == 5'b0)
+            begin
+                result <= regA + {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB + {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b001100)
+        begin // andi
+            if(rs == 5'b0)
+            begin
+                result <= regA & {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB & {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b001101)
+        begin // ori
+            if(rs == 5'b0)
+            begin
+                result <= regA | {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB | {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b001110)
+        begin // xori
+            if(rs == 5'b0)
+            begin
+                result <= regA ^ {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB ^ {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b000100)
+        begin // beq
+            if(rs == 5'b0)
+            begin
+                result <= regA + ~regB + 1;
+            end
+            else
+            begin
+                result <= regB + ~regA + 1;
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b000101)
+        begin // bne
+            if(rs == 5'b0)
+            begin
+                result <= regA + ~regB + 1;
+            end
+            else
+            begin
+                result <= regB + ~regA + 1;
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b001010)
+        begin // slti(signed)
+            if(rs == 5'b0)
+            begin
+                result <= regA + ~{{16{imm16[15]}}, imm16} + 1;
+                if(regA[31] != imm16[15])
                 begin
                     flags[0] <= result[31] ^ regA[31];
                 end
                 else
-                    flags[0] <= 1'b1;
-                flags[2:1] <= {result == 32'b0, result[31]};
+                    flags[0] <= 1'b0;
             end
-            else if(func == 6'b100011) begin // sub
-                if(rs == 5'b0)begin
-                    result <= regA + ~regB + 1;
+            else
+            begin
+                result <= regB + ~{{16{imm16[15]}}, imm16} + 1;
+                if(regB[31] != imm16[15])
+                begin
+                    flags[0] <= result[31] ^ regB[31];
                 end
-                else begin
-                    result <= regB + ~regA + 1;
-                end
-                flags[0] <= 1'b0;
-                flags[2:1] <= {result == 32'b0, result[31]};
+                else
+                    flags[0] <= 1'b0;
             end
+            flags[2:1] <= {result == 32'b0, result[31]};
         end
-        else // I: reg[rt] <- reg[rs] op imm
-        begin
-            ;
+        else if(opcode == 6'b001011)
+        begin // sltiu
+            if(rs == 5'b0)
+            begin
+                result <= regA + ~{{16{imm16[15]}}, imm16} + 1;
+            end
+            else
+            begin
+                result <= regB + ~{{16{imm16[15]}}, imm16} + 1;
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b100011)
+        begin // lw
+            if(rs == 5'b0)
+            begin
+                result <= regA + {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB + {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
+        end
+        else if(opcode == 6'b101011)
+        begin // sw
+            if(rs == 5'b0)
+            begin
+                result <= regA + {16'b0, imm16};
+            end
+            else
+            begin
+                result <= regB + {16'b0, imm16};
+            end
+            flags <= {result == 32'b0, result[31], 1'b0};
         end
     end
 endmodule
