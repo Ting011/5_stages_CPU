@@ -380,5 +380,10 @@ module alu(
             end
             flags <= {result == 32'b0, result[31], 1'b0};
         end
+        else
+        begin
+            result <= 32'b0;
+            flags <= 3'b0;
+        end
     end
 endmodule
